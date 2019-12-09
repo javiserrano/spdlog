@@ -49,7 +49,12 @@ protected:
     {
         int err;
 
-        size_t length = msg.payload.size();
+        string_view_t payload;
+        memory_buf_t formatted;
+        base_sink<Mutex>::formatter_->format(msg, formatted);
+        payload = string_view_t(formatted.data(), formatted.size());
+
+        size_t length = payload.size();
         // limit to max int
         if (length > static_cast<size_t>(std::numeric_limits<int>::max()))
         {
@@ -60,12 +65,12 @@ protected:
         if (msg.source.empty())
         {
             // Note: function call inside '()' to avoid macro expansion
-            err = (sd_journal_send)("MESSAGE=%.*s", static_cast<int>(length), msg.payload.data(), "PRIORITY=%d", syslog_level(msg.level),
+            err = (sd_journal_send)("MESSAGE=%.*s", static_cast<int>(length), payload.data(), "PRIORITY=%d", syslog_level(msg.level),
                 "SYSLOG_IDENTIFIER=%.*s", static_cast<int>(msg.logger_name.size()), msg.logger_name.data(), nullptr);
         }
         else
         {
-            err = (sd_journal_send)("MESSAGE=%.*s", static_cast<int>(length), msg.payload.data(), "PRIORITY=%d", syslog_level(msg.level),
+            err = (sd_journal_send)("MESSAGE=%.*s", static_cast<int>(length), payload.data(), "PRIORITY=%d", syslog_level(msg.level),
                 "SYSLOG_IDENTIFIER=%.*s", static_cast<int>(msg.logger_name.size()), msg.logger_name.data(), "CODE_FILE=%s",
                 msg.source.filename, "CODE_LINE=%d", msg.source.line, "CODE_FUNC=%s", msg.source.funcname, nullptr);
         }
